@@ -101,7 +101,38 @@ func TestGoClosure(t *testing.T) {
              })`, obj)
 	res := ctx.GetNumber(-1)
 	expect(t, res, float64(3))
+	// check for leaks
+	ctx.Gc(0)
+	ctx.Gc(0)
+	expect(t, len(objectMap), 0)
 	ctx.DestroyHeap()
+}
+
+type SampleObject struct {
+	X int
+}
+
+func TestGoObject(t *testing.T) {
+ 	ctx := NewContext()
+	ctx.PushGlobalObject()
+	ctx.PushGoObject(SampleObject{42})
+ 	ctx.PutPropString(-2, "y")
+ 	ctx.Pop()
+	obj := MethodSuite{
+		"tst": func(d *Context) int {
+			so := d.GetGoObject().(SampleObject)
+			d.PushInt(so.X)
+			return 1
+		},
+	}
+	ctx.EvalWith("(function(o) { return o.tst(y); })", obj)
+	res := ctx.GetNumber(-1)
+	expect(t, res, float64(42))
+	// check for leaks
+	ctx.PevalString("y = null")
+	ctx.Gc(0)
+	ctx.Gc(0)
+	expect(t, len(objectMap), 0)
 }
 
 func expect(t *testing.T, a interface{}, b interface{}) {

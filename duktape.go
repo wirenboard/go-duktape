@@ -4,13 +4,17 @@ package duktape
 #cgo linux LDFLAGS: -lm
 
 # include "duktape.h"
+extern duk_ret_t goFinalize(duk_context *ctx);
 extern duk_ret_t goCall(duk_context *ctx);
 */
 import "C"
+import "log"
+import "sync"
 import "errors"
 import "unsafe"
 
 const goFuncProp = "goFuncData"
+const goObjProp = "goObjData"
 const (
 	DUK_TYPE_NONE Type = iota
 	DUK_TYPE_UNDEFINED
@@ -35,6 +39,9 @@ func (t Type) IsObject() bool    { return t == DUK_TYPE_OBJECT }
 func (t Type) IsBuffer() bool    { return t == DUK_TYPE_BUFFER }
 func (t Type) IsPointer() bool   { return t == DUK_TYPE_POINTER }
 
+var objectMutex sync.Mutex
+var objectMap map[unsafe.Pointer]interface{} = make(map[unsafe.Pointer]interface{})
+
 type Context struct {
 	duk_context unsafe.Pointer
 }
@@ -48,6 +55,81 @@ func NewContext() *Context {
 	return ctx
 }
 
+func (d *Context) PutInternalPropString (objIndex int, key string) bool {
+	cKey := C.CString("_" + key)
+	defer C.free(unsafe.Pointer(cKey))
+	*cKey = -1 // \xff as the first char designates an internal property
+	return int(C.duk_put_prop_string(d.duk_context, C.duk_idx_t(objIndex), cKey)) == 1
+}
+
+func (d *Context) GetInternalPropString (objIndex int, key string) bool {
+	cKey := C.CString("_" + key)
+	defer C.free(unsafe.Pointer(cKey))
+	*cKey = -1 // \xff as the first char designates an internal property
+	return int(C.duk_get_prop_string(d.duk_context, C.duk_idx_t(objIndex), cKey)) == 1
+}
+
+//export goFinalize
+func goFinalize(ctx unsafe.Pointer) C.duk_ret_t {
+	d := &Context{ctx}
+	d.PushCurrentFunction()
+	d.GetInternalPropString(-1, goFuncProp)	
+	if !Type(d.GetType(-1)).IsPointer() {
+		d.Pop2()
+		log.Printf("finalize -- fail!")
+		return C.duk_ret_t(C.DUK_RET_TYPE_ERROR)
+	}
+	key := d.GetPointer(-1)
+	log.Printf("finalize: %v", key)
+	d.Pop2()
+	objectMutex.Lock()
+	delete(objectMap, key)
+	objectMutex.Unlock()
+	C.free(key)
+	return C.duk_ret_t(0)
+}
+
+func (d *Context) putGoObjectRef(prop string, o interface{}) {
+	key := C.malloc(1) // guaranteed to be unique until freed
+
+	objectMutex.Lock()
+	objectMap[key] = o
+	objectMutex.Unlock()
+	log.Printf("new object ref via %s: %v = %v", prop, key, o)
+
+	d.PushCFunction((*[0]byte)(C.goFinalize), 1)
+	d.PushPointer(key)
+	d.PutInternalPropString(-2, goFuncProp)
+
+	d.SetFinalizer(-2)
+
+	d.PushPointer(key)
+	d.PutInternalPropString(-2, prop)
+}
+
+func (d *Context) PushGoObject(o interface{}) {
+	d.PushObject()
+	d.putGoObjectRef(goObjProp, o)
+}
+
+func (d *Context) getGoObjectRef(prop string) interface{} {
+	d.GetInternalPropString(-1, prop)
+	if !Type(d.GetType(-1)).IsPointer() {
+		d.Pop()
+		return nil
+	}
+	key := d.GetPointer(-1)
+	d.Pop()
+	objectMutex.Lock()
+	defer objectMutex.Unlock()
+	log.Printf("get ref via %s: %v = %v", prop, key, objectMap[key])
+	return objectMap[key]
+}
+
+func (d *Context) GetGoObject() interface{} {
+	return d.getGoObjectRef(goObjProp)
+}
+
 //export goCall
 func goCall(ctx unsafe.Pointer) C.duk_ret_t {
 	d := &Context{ctx}
@@ -59,15 +141,13 @@ func goCall(ctx unsafe.Pointer) C.duk_ret_t {
         */
 
 	d.PushCurrentFunction()
-	d.GetPropString(-1, goFuncProp)
-	if ! Type(d.GetType(-1)).IsPointer() {
-		d.Pop2()
+	if fd, _ := d.getGoObjectRef(goFuncProp).(*GoFuncData); fd == nil {
+		d.Pop()
 		return C.duk_ret_t(C.DUK_RET_TYPE_ERROR)
+	} else {
+		d.Pop()
+		return C.duk_ret_t(fd.f(d))
 	}
-	fd := (*GoFuncData)(d.GetPointer(-1))
-	d.Pop2()
-
-	return C.duk_ret_t(fd.f(d))
 }
 
 type GoFunc func (d *Context) int
@@ -76,10 +156,9 @@ type GoFuncData struct {
 }
 
 // Push goCall with its "goFuncData" property set to fd
-func (d *Context) pushGoFunc(fd *GoFuncData) {
+func (d *Context) PushGoFunc(fd *GoFuncData) {
 	d.PushCFunction((*[0]byte)(C.goCall), C.DUK_VARARGS)
-	d.PushPointer(unsafe.Pointer(fd))
-	d.PutPropString(-2, goFuncProp)
+	d.putGoObjectRef(goFuncProp, fd)
 }
 
 
@@ -99,7 +178,7 @@ func (d *Context) EvalWith(source string, suite MethodSuite) error {
 	}
 
 	for prop, fd := range suiteData {
-		d.pushGoFunc(fd)
+		d.PushGoFunc(fd)
 		d.PutPropString(-2, prop)
 	}
 
