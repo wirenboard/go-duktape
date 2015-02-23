@@ -165,11 +165,11 @@ type GoFuncData struct {
 }
 
 // Push goCall with its "goFuncData" property set to fd
-func (d *Context) PushGoFunc(fd *GoFuncData) {
+func (d *Context) PushGoFunc(f GoFunc) {
+	fd := &GoFuncData{f}
 	d.PushCFunction((*[0]byte)(C.goCall), C.DUK_VARARGS)
 	d.putGoObjectRef(goFuncProp, fd)
 }
-
 
 type MethodSuite map[string]GoFunc
 
@@ -180,14 +180,8 @@ func (d *Context) EvalWith(source string, suite MethodSuite) error {
 
 	d.PushObject()
 
-	// Make sure we keep references to all the GoFuncData
-	suiteData := make(map[string]*GoFuncData)
 	for prop, f := range suite {
-		suiteData[prop] = &GoFuncData{f}
-	}
-
-	for prop, fd := range suiteData {
-		d.PushGoFunc(fd)
+		d.PushGoFunc(f)
 		d.PutPropString(-2, prop)
 	}
 
