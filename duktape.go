@@ -138,8 +138,8 @@ func (d *Context) PushGoObject(o interface{}) {
 	d.putGoObjectRef(goObjProp, o)
 }
 
-func (d *Context) getGoObjectRef(prop string) interface{} {
-	d.GetInternalPropString(-1, prop)
+func (d *Context) getGoObjectRef(objIndex int, prop string) interface{} {
+	d.GetInternalPropString(objIndex, prop)
 	if !Type(d.GetType(-1)).IsPointer() {
 		d.Pop()
 		return nil
@@ -152,8 +152,8 @@ func (d *Context) getGoObjectRef(prop string) interface{} {
 	return objectMap[key]
 }
 
-func (d *Context) GetGoObject() interface{} {
-	return d.getGoObjectRef(goObjProp)
+func (d *Context) GetGoObject(objIndex int) interface{} {
+	return d.getGoObjectRef(objIndex, goObjProp)
 }
 
 //export goCall
@@ -167,7 +167,7 @@ func goCall(ctx unsafe.Pointer) C.duk_ret_t {
         */
 
 	d.PushCurrentFunction()
-	if fd, _ := d.getGoObjectRef(goFuncProp).(*GoFuncData); fd == nil {
+	if fd, _ := d.getGoObjectRef(-1, goFuncProp).(*GoFuncData); fd == nil {
 		d.Pop()
 		return C.duk_ret_t(C.DUK_RET_TYPE_ERROR)
 	} else {

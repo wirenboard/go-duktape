@@ -120,7 +120,7 @@ func TestGoObject(t *testing.T) {
  	ctx.Pop()
 	obj := MethodSuite{
 		"tst": func(d *Context) int {
-			so := d.GetGoObject().(SampleObject)
+			so := d.GetGoObject(-1).(SampleObject)
 			d.PushInt(so.X)
 			return 1
 		},
