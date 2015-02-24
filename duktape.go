@@ -8,7 +8,6 @@ extern duk_ret_t goFinalize(duk_context *ctx);
 extern duk_ret_t goCall(duk_context *ctx);
 */
 import "C"
-import "log"
 import "sync"
 import "errors"
 import "unsafe"
@@ -102,11 +101,9 @@ func goFinalize(ctx unsafe.Pointer) C.duk_ret_t {
 	d.GetInternalPropString(-1, goFuncProp)	
 	if !Type(d.GetType(-1)).IsPointer() {
 		d.Pop2()
-		log.Printf("finalize -- fail!")
 		return C.duk_ret_t(C.DUK_RET_TYPE_ERROR)
 	}
 	key := d.GetPointer(-1)
-	log.Printf("finalize: %v", key)
 	d.Pop2()
 	objectMutex.Lock()
 	delete(objectMap, key)
@@ -121,7 +118,6 @@ func (d *Context) putGoObjectRef(prop string, o interface{}) {
 	objectMutex.Lock()
 	objectMap[key] = o
 	objectMutex.Unlock()
-	log.Printf("new object ref via %s: %v = %v", prop, key, o)
 
 	d.PushCFunction((*[0]byte)(C.goFinalize), 1)
 	d.PushPointer(key)
@@ -148,7 +144,6 @@ func (d *Context) getGoObjectRef(objIndex int, prop string) interface{} {
 	d.Pop()
 	objectMutex.Lock()
 	defer objectMutex.Unlock()
-	log.Printf("get ref via %s: %v = %v", prop, key, objectMap[key])
 	return objectMap[key]
 }
 
