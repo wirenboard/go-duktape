@@ -81,16 +81,14 @@ func NewContext() *Context {
 }
 
 func (d *Context) PutInternalPropString (objIndex int, key string) bool {
-	cKey := C.CString("_" + key)
+	cKey := C.CString("\xff" + key) // \xff as the first char designates an internal property
 	defer C.free(unsafe.Pointer(cKey))
-	*cKey = -1 // \xff as the first char designates an internal property
 	return int(C.duk_put_prop_string(d.duk_context, C.duk_idx_t(objIndex), cKey)) == 1
 }
 
 func (d *Context) GetInternalPropString (objIndex int, key string) bool {
-	cKey := C.CString("_" + key)
+	cKey := C.CString("\xff" + key) // \xff as the first char designates an internal property
 	defer C.free(unsafe.Pointer(cKey))
-	*cKey = -1 // \xff as the first char designates an internal property
 	return int(C.duk_get_prop_string(d.duk_context, C.duk_idx_t(objIndex), cKey)) == 1
 }
 
