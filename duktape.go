@@ -201,3 +201,9 @@ func (d *Context) EvalWith(source string, suite MethodSuite) error {
 
 	return nil
 }
+
+// TBD: panic handling.
+// When a goroutine panics, mark the context as panicking and throw a special JS
+// exception, saving the value passed to panic() to the context.
+// When the exception is caught, retrieve the value that was passed to panic(),
+// and call panic() again.

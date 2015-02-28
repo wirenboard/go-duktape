@@ -773,21 +773,27 @@ func (d *Context) PevalStringNoresult(src string) int {
 
 // See: http://duktape.org/api.html#duk_pop
 func (d *Context) Pop() {
+	if d.GetTop() == 0 {
+		panic("duktape stack underflow")
+	}
 	C.duk_pop(d.duk_context)
 }
 
 // See: http://duktape.org/api.html#duk_pop_2
 func (d *Context) Pop2() {
-	C.duk_pop_2(d.duk_context)
+	d.PopN(2)
 }
 
 // See: http://duktape.org/api.html#duk_pop_3
 func (d *Context) Pop3() {
-	C.duk_pop_3(d.duk_context)
+	d.PopN(3)
 }
 
 // See: http://duktape.org/api.html#duk_pop_n
 func (d *Context) PopN(count int) {
+	if d.GetTop() < count {
+		panic("duktape stack underflow")
+	}
 	C.duk_pop_n(d.duk_context, C.duk_idx_t(count))
 }
 
