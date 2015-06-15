@@ -15,29 +15,29 @@ import "unsafe"
 const goFuncProp = "goFuncData"
 const goObjProp = "goObjData"
 const (
-	DUK_ENUM_INCLUDE_NONENUMERABLE	 = C.DUK_ENUM_INCLUDE_NONENUMERABLE
-	DUK_ENUM_INCLUDE_INTERNAL	 = C.DUK_ENUM_INCLUDE_INTERNAL
-	DUK_ENUM_OWN_PROPERTIES_ONLY	 = C.DUK_ENUM_OWN_PROPERTIES_ONLY
-	DUK_ENUM_ARRAY_INDICES_ONLY	 = C.DUK_ENUM_ARRAY_INDICES_ONLY
-	DUK_ENUM_SORT_ARRAY_INDICES	 = C.DUK_ENUM_SORT_ARRAY_INDICES
-	DUK_ENUM_NO_PROXY_BEHAVIOR	 = C.DUK_ENUM_NO_PROXY_BEHAVIOR
+	DUK_ENUM_INCLUDE_NONENUMERABLE = C.DUK_ENUM_INCLUDE_NONENUMERABLE
+	DUK_ENUM_INCLUDE_INTERNAL      = C.DUK_ENUM_INCLUDE_INTERNAL
+	DUK_ENUM_OWN_PROPERTIES_ONLY   = C.DUK_ENUM_OWN_PROPERTIES_ONLY
+	DUK_ENUM_ARRAY_INDICES_ONLY    = C.DUK_ENUM_ARRAY_INDICES_ONLY
+	DUK_ENUM_SORT_ARRAY_INDICES    = C.DUK_ENUM_SORT_ARRAY_INDICES
+	DUK_ENUM_NO_PROXY_BEHAVIOR     = C.DUK_ENUM_NO_PROXY_BEHAVIOR
 )
 
 const (
-	DUK_RET_UNIMPLEMENTED_ERROR	 = C.DUK_RET_UNIMPLEMENTED_ERROR
-	DUK_RET_UNSUPPORTED_ERROR	 = C.DUK_RET_UNSUPPORTED_ERROR
-	DUK_RET_INTERNAL_ERROR		 = C.DUK_RET_INTERNAL_ERROR
-	DUK_RET_ALLOC_ERROR		 = C.DUK_RET_ALLOC_ERROR
-	DUK_RET_ASSERTION_ERROR		 = C.DUK_RET_ASSERTION_ERROR
-	DUK_RET_API_ERROR		 = C.DUK_RET_API_ERROR
-	DUK_RET_UNCAUGHT_ERROR		 = C.DUK_RET_UNCAUGHT_ERROR
-	DUK_RET_ERROR			 = C.DUK_RET_ERROR
-	DUK_RET_EVAL_ERROR		 = C.DUK_RET_EVAL_ERROR
-	DUK_RET_RANGE_ERROR		 = C.DUK_RET_RANGE_ERROR
-	DUK_RET_REFERENCE_ERROR		 = C.DUK_RET_REFERENCE_ERROR
-	DUK_RET_SYNTAX_ERROR		 = C.DUK_RET_SYNTAX_ERROR
-	DUK_RET_TYPE_ERROR		 = C.DUK_RET_TYPE_ERROR
-	DUK_RET_URI_ERROR		 = C.DUK_RET_URI_ERROR
+	DUK_RET_UNIMPLEMENTED_ERROR = C.DUK_RET_UNIMPLEMENTED_ERROR
+	DUK_RET_UNSUPPORTED_ERROR   = C.DUK_RET_UNSUPPORTED_ERROR
+	DUK_RET_INTERNAL_ERROR      = C.DUK_RET_INTERNAL_ERROR
+	DUK_RET_ALLOC_ERROR         = C.DUK_RET_ALLOC_ERROR
+	DUK_RET_ASSERTION_ERROR     = C.DUK_RET_ASSERTION_ERROR
+	DUK_RET_API_ERROR           = C.DUK_RET_API_ERROR
+	DUK_RET_UNCAUGHT_ERROR      = C.DUK_RET_UNCAUGHT_ERROR
+	DUK_RET_ERROR               = C.DUK_RET_ERROR
+	DUK_RET_EVAL_ERROR          = C.DUK_RET_EVAL_ERROR
+	DUK_RET_RANGE_ERROR         = C.DUK_RET_RANGE_ERROR
+	DUK_RET_REFERENCE_ERROR     = C.DUK_RET_REFERENCE_ERROR
+	DUK_RET_SYNTAX_ERROR        = C.DUK_RET_SYNTAX_ERROR
+	DUK_RET_TYPE_ERROR          = C.DUK_RET_TYPE_ERROR
+	DUK_RET_URI_ERROR           = C.DUK_RET_URI_ERROR
 )
 
 const (
@@ -50,6 +50,23 @@ const (
 	DUK_TYPE_OBJECT
 	DUK_TYPE_BUFFER
 	DUK_TYPE_POINTER
+)
+
+const (
+	DUK_ERR_UNIMPLEMENTED_ERROR = C.DUK_ERR_UNIMPLEMENTED_ERROR
+	DUK_ERR_UNSUPPORTED_ERROR   = C.DUK_ERR_UNSUPPORTED_ERROR
+	DUK_ERR_INTERNAL_ERROR      = C.DUK_ERR_INTERNAL_ERROR
+	DUK_ERR_ALLOC_ERROR         = C.DUK_ERR_ALLOC_ERROR
+	DUK_ERR_ASSERTION_ERROR     = C.DUK_ERR_ASSERTION_ERROR
+	DUK_ERR_API_ERROR           = C.DUK_ERR_API_ERROR
+	DUK_ERR_UNCAUGHT_ERROR      = C.DUK_ERR_UNCAUGHT_ERROR
+	DUK_ERR_ERROR               = C.DUK_ERR_ERROR
+	DUK_ERR_EVAL_ERROR          = C.DUK_ERR_EVAL_ERROR
+	DUK_ERR_RANGE_ERROR         = C.DUK_ERR_RANGE_ERROR
+	DUK_ERR_REFERENCE_ERROR     = C.DUK_ERR_REFERENCE_ERROR
+	DUK_ERR_SYNTAX_ERROR        = C.DUK_ERR_SYNTAX_ERROR
+	DUK_ERR_TYPE_ERROR          = C.DUK_ERR_TYPE_ERROR
+	DUK_ERR_URI_ERROR           = C.DUK_ERR_URI_ERROR
 )
 
 type Type int
@@ -80,13 +97,13 @@ func NewContext() *Context {
 	return ctx
 }
 
-func (d *Context) PutInternalPropString (objIndex int, key string) bool {
+func (d *Context) PutInternalPropString(objIndex int, key string) bool {
 	cKey := C.CString("\xff" + key) // \xff as the first char designates an internal property
 	defer C.free(unsafe.Pointer(cKey))
 	return int(C.duk_put_prop_string(d.duk_context, C.duk_idx_t(objIndex), cKey)) == 1
 }
 
-func (d *Context) GetInternalPropString (objIndex int, key string) bool {
+func (d *Context) GetInternalPropString(objIndex int, key string) bool {
 	cKey := C.CString("\xff" + key) // \xff as the first char designates an internal property
 	defer C.free(unsafe.Pointer(cKey))
 	return int(C.duk_get_prop_string(d.duk_context, C.duk_idx_t(objIndex), cKey)) == 1
@@ -96,7 +113,7 @@ func (d *Context) GetInternalPropString (objIndex int, key string) bool {
 func goFinalize(ctx unsafe.Pointer) C.duk_ret_t {
 	d := &Context{ctx}
 	d.PushCurrentFunction()
-	d.GetInternalPropString(-1, goFuncProp)	
+	d.GetInternalPropString(-1, goFuncProp)
 	if !Type(d.GetType(-1)).IsPointer() {
 		d.Pop2()
 		return C.duk_ret_t(C.DUK_RET_TYPE_ERROR)
@@ -154,10 +171,10 @@ func goCall(ctx unsafe.Pointer) C.duk_ret_t {
 	d := &Context{ctx}
 
 	/*
-	d.PushContextDump()
-	log.Printf("goCall context: %s", d.GetString(-1))
-	d.Pop()
-        */
+		d.PushContextDump()
+		log.Printf("goCall context: %s", d.GetString(-1))
+		d.Pop()
+	*/
 
 	d.PushCurrentFunction()
 	if fd, _ := d.getGoObjectRef(-1, goFuncProp).(*GoFuncData); fd == nil {
@@ -169,7 +186,7 @@ func goCall(ctx unsafe.Pointer) C.duk_ret_t {
 	}
 }
 
-type GoFunc func (d *Context) int
+type GoFunc func(d *Context) int
 type GoFuncData struct {
 	f GoFunc
 }

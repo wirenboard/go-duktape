@@ -119,6 +119,10 @@ static void _duk_xcopy_top(duk_context *to_ctx, duk_context *from_ctx, duk_idx_t
 static void _duk_xmove_top(duk_context *to_ctx, duk_context *from_ctx, duk_idx_t count) {
 	return duk_xmove_top(to_ctx, from_ctx, count);
 }
+static duk_idx_t _duk_push_error_object(duk_context *ctx, duk_errcode_t err_code, const char *msg) {
+        // duk_push_error_object() is a macro
+	return duk_push_error_object(ctx, err_code, "%s", msg);
+}
 */
 import "C"
 import "unsafe"
@@ -1287,6 +1291,13 @@ func (d *Context) XmoveTop(fromCtx *Context, count int) {
 // See: http://duktape.org/api.html#duk_push_pointer
 func (d *Context) PushPointer(p unsafe.Pointer) {
 	C.duk_push_pointer(d.duk_context, p)
+}
+
+// See: http://duktape.org/api.html#duk_push_error_object
+func (d *Context) PushErrorObject(errCode int, errMsg string) int {
+	__errMsg__ := C.CString(errMsg)
+	defer C.free(unsafe.Pointer(__errMsg__))
+	return int(C._duk_push_error_object(d.duk_context, C.duk_errcode_t(errCode), __errMsg__))
 }
 
 /**
