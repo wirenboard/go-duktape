@@ -2857,6 +2857,7 @@ struct duk_number_list_entry {
 #define DUK_ERR_ASSERTION_ERROR           54   /* AssertionError */
 #define DUK_ERR_API_ERROR                 55   /* APIError */
 #define DUK_ERR_UNCAUGHT_ERROR            56   /* UncaughtError */
+#define DUK_ERR_INSTACK_ERROR             57   /* Error object is passed by stack */
 
 /* Ecmascript E5 specification error codes */
 #define DUK_ERR_ERROR                     100  /* Error */
@@ -2882,6 +2883,7 @@ struct duk_number_list_entry {
 #define DUK_RET_SYNTAX_ERROR              (-DUK_ERR_SYNTAX_ERROR)
 #define DUK_RET_TYPE_ERROR                (-DUK_ERR_TYPE_ERROR)
 #define DUK_RET_URI_ERROR                 (-DUK_ERR_URI_ERROR)
+#define DUK_RET_INSTACK_ERROR             (-DUK_ERR_INSTACK_ERROR)
 
 /* Return codes for protected calls (duk_safe_call(), duk_pcall()). */
 #define DUK_EXEC_SUCCESS                  0

@@ -29208,6 +29208,12 @@ DUK_INTERNAL void duk_error_throw_from_negative_rc(duk_hthread *thr, duk_ret_t r
 
 	code = -rc;
 
+    /* if error object is passed by stack, check it and just make a throw() */
+    if (rc == DUK_RET_INSTACK_ERROR) {
+        duk_throw(ctx);
+        DUK_UNREACHABLE();
+    }
+
 	switch (rc) {
 	case DUK_RET_UNIMPLEMENTED_ERROR:  msg = "unimplemented"; break;
 	case DUK_RET_UNSUPPORTED_ERROR:    msg = "unsupported"; break;
