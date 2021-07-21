@@ -6,7 +6,7 @@ package duktape
 # include "duktape.h"
 extern duk_ret_t goFinalize(duk_context *ctx);
 extern duk_ret_t goCall(duk_context *ctx);
-extern void goFatalError(void* udata, int code, const char* msg);
+extern void goFatalError(void* udata, int code, char* msg);
 */
 import "C"
 import (
