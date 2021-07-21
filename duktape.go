@@ -6,11 +6,15 @@ package duktape
 # include "duktape.h"
 extern duk_ret_t goFinalize(duk_context *ctx);
 extern duk_ret_t goCall(duk_context *ctx);
+extern void goFatalError(void* udata, int code, char* msg);
 */
 import "C"
-import "sync"
-import "errors"
-import "unsafe"
+import (
+	"errors"
+	"log"
+	"sync"
+	"unsafe"
+)
 
 const goFuncProp = "goFuncData"
 const goObjProp = "goObjData"
@@ -100,7 +104,7 @@ type Context struct {
 func NewContext() *Context {
 	ctx := &Context{
 		// TODO: "A caller SHOULD implement a fatal error handler in most applications."
-		duk_context: C.duk_create_heap(nil, nil, nil, nil, nil),
+		duk_context: C.duk_create_heap(nil, nil, nil, nil, (*[0]byte)(C.goFatalError)),
 	}
 	return ctx
 }
@@ -225,6 +229,11 @@ func (d *Context) EvalWith(source string, suite MethodSuite) error {
 	}
 
 	return nil
+}
+
+//export goFatalError
+func goFatalError(udata unsafe.Pointer, code C.int, msg *C.char) {
+	log.Panicf("duktape fatal: [%d] %s", code, C.GoString(msg))
 }
 
 // TBD: panic handling.
