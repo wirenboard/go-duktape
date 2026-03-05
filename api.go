@@ -125,7 +125,10 @@ static duk_idx_t _duk_push_error_object(duk_context *ctx, duk_errcode_t err_code
 }
 */
 import "C"
-import "unsafe"
+import (
+	"runtime"
+	"unsafe"
+)
 
 // See: http://duktape.org/api.html#duk_alloc
 func (d *Context) Alloc(size int) {
@@ -260,6 +263,11 @@ func (d *Context) DelPropString(objIndex int, key string) bool {
 // See: http://duktape.org/api.html#duk_destroy_heap
 func (d *Context) DestroyHeap() {
 	C.duk_destroy_heap(d.duk_context)
+	if p, ok := allocMap.Load(d); ok {
+		C.free(p.(unsafe.Pointer))
+		allocMap.Delete(d)
+	}
+	runtime.SetFinalizer(d, nil)
 }
 
 // See: http://duktape.org/api.html#duk_dump_context_stderr

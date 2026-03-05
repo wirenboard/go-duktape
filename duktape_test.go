@@ -11,7 +11,6 @@ func TestEvalString(t *testing.T) {
 	ctx.DestroyHeap()
 }
 
-
 func TestEvalFunc(t *testing.T) {
 	ctx := NewContext()
 	ctx.PevalString(`(function (x) { return x + x; })`)
@@ -29,7 +28,7 @@ func TestEvalWith(t *testing.T) {
 	obj := MethodSuite{
 		"hi": func(d *Context) int {
 			x := d.GetInt(-2)
-			d.PushString("hi! " + string(48 + x))
+			d.PushString("hi! " + string(48+x))
 			return 1
 		},
 	}
@@ -43,9 +42,7 @@ func TestEvalWith(t *testing.T) {
 	ctx.DestroyHeap()
 }
 
-
 // from duktape examples
-
 
 func TestMyAddTwo(t *testing.T) {
 	obj := MethodSuite{
@@ -72,7 +69,6 @@ func TestMyAddTwo(t *testing.T) {
 	expect(t, res, float64(5))
 	ctx.DestroyHeap()
 }
-
 
 func TestGoClosure(t *testing.T) {
 	sharedState := 0
@@ -113,11 +109,11 @@ type SampleObject struct {
 }
 
 func TestGoObject(t *testing.T) {
- 	ctx := NewContext()
+	ctx := NewContext()
 	ctx.PushGlobalObject()
 	ctx.PushGoObject(SampleObject{42})
- 	ctx.PutPropString(-2, "y")
- 	ctx.Pop()
+	ctx.PutPropString(-2, "y")
+	ctx.Pop()
 	obj := MethodSuite{
 		"tst": func(d *Context) int {
 			so := d.GetGoObject(-1).(SampleObject)

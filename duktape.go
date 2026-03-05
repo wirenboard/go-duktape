@@ -7,11 +7,15 @@ package duktape
 extern duk_ret_t goFinalize(duk_context *ctx);
 extern duk_ret_t goCall(duk_context *ctx);
 extern void goFatalError(void* udata, int code, char* msg);
+extern void* goAlloc(void* udata, duk_size_t size);
+extern void* goRealloc(void* udata, void* ptr, duk_size_t size);
+extern void goFree(void* udata, void* ptr);
 */
 import "C"
 import (
 	"errors"
 	"log"
+	"runtime"
 	"sync"
 	"unsafe"
 )
@@ -95,17 +99,46 @@ func (t Type) IsPointer() bool   { return t == DUK_TYPE_POINTER }
 
 var objectMutex sync.Mutex
 var objectMap map[unsafe.Pointer]interface{} = make(map[unsafe.Pointer]interface{})
+var allocMap sync.Map // key: *Context, value: unsafe.Pointer (alloc_udata)
 
 type Context struct {
 	duk_context unsafe.Pointer
 }
 
 // Returns initialized duktape context object
-func NewContext() *Context {
-	ctx := &Context{
-		// TODO: "A caller SHOULD implement a fatal error handler in most applications."
-		duk_context: C.duk_create_heap(nil, nil, nil, nil, (*[0]byte)(C.goFatalError)),
+func NewContext(maxHeapSize uint64) *Context {
+	var udata unsafe.Pointer = nil
+	if maxHeapSize > 0 {
+		hdrSize := C.size_t(unsafe.Sizeof(C.size_t(0))) * 2
+		udata = C.malloc(hdrSize)
+		if udata != nil {
+			arr := (*[2]C.size_t)(udata)
+			arr[0] = 0                     // total_allocated
+			arr[1] = C.size_t(maxHeapSize) // max_allocated
+		}
 	}
+
+	var dukCtx unsafe.Pointer
+	if udata != nil {
+		dukCtx = C.duk_create_heap((*[0]byte)(C.goAlloc), (*[0]byte)(C.goRealloc), (*[0]byte)(C.goFree), udata, (*[0]byte)(C.goFatalError))
+	} else {
+		dukCtx = C.duk_create_heap(nil, nil, nil, nil, (*[0]byte)(C.goFatalError))
+	}
+
+	ctx := &Context{
+		duk_context: dukCtx,
+	}
+	allocMap.Store(ctx, udata)
+
+	if udata != nil {
+		runtime.SetFinalizer(ctx, func(c *Context) {
+			if p, ok := allocMap.Load(c); ok {
+				C.free(p.(unsafe.Pointer))
+				allocMap.Delete(c)
+			}
+		})
+	}
+
 	return ctx
 }
 
@@ -234,6 +267,111 @@ func (d *Context) EvalWith(source string, suite MethodSuite) error {
 //export goFatalError
 func goFatalError(udata unsafe.Pointer, code C.int, msg *C.char) {
 	log.Panicf("duktape fatal: [%d] %s", code, C.GoString(msg))
+}
+
+//export goAlloc
+func goAlloc(udata unsafe.Pointer, size C.duk_size_t) unsafe.Pointer {
+	if size == 0 {
+		return nil
+	}
+
+	hdrSize := C.size_t(unsafe.Sizeof(C.size_t(0)))
+
+	if udata != nil {
+		arr := (*[2]C.size_t)(udata)
+		total_allocated := arr[0]
+		max_allocated := arr[1]
+		if max_allocated > 0 && total_allocated+C.size_t(size) > max_allocated {
+			return nil
+		}
+	}
+
+	raw := C.malloc(C.size_t(size) + hdrSize)
+	if raw == nil {
+		return nil
+	}
+
+	header := (*C.size_t)(raw)
+	*header = C.size_t(size)
+
+	if udata != nil {
+		arr := (*[2]C.size_t)(udata)
+		arr[0] += C.size_t(size) // total_allocated
+	}
+
+	return unsafe.Pointer(uintptr(raw) + uintptr(hdrSize))
+}
+
+//export goRealloc
+func goRealloc(udata unsafe.Pointer, ptr unsafe.Pointer, size C.duk_size_t) unsafe.Pointer {
+	hdrSize := C.size_t(unsafe.Sizeof(C.size_t(0)))
+
+	if ptr == nil {
+		return goAlloc(udata, size)
+	}
+
+	raw := unsafe.Pointer(uintptr(ptr) - uintptr(hdrSize))
+	header := (*C.size_t)(raw)
+	old := *header
+
+	if size == 0 {
+		if udata != nil {
+			arr := (*[2]C.size_t)(udata)
+			if arr[0] >= old {
+				arr[0] -= old
+			} else {
+				arr[0] = 0
+			}
+		}
+		C.free(raw)
+		return nil
+	}
+
+	if udata != nil {
+		arr := (*[2]C.size_t)(udata)
+		total_allocated := arr[0]
+		max_allocated := arr[1]
+		if max_allocated > 0 && total_allocated-old+C.size_t(size) > max_allocated {
+			return nil
+		}
+	}
+
+	t := C.realloc(raw, C.size_t(size)+hdrSize)
+	if t == nil {
+		return nil
+	}
+
+	header = (*C.size_t)(t)
+	*header = C.size_t(size)
+	if udata != nil {
+		arr := (*[2]C.size_t)(udata)
+		if arr[0] >= old {
+			arr[0] = arr[0] - old + C.size_t(size)
+		} else {
+			arr[0] = C.size_t(size)
+		}
+	}
+	return unsafe.Pointer(uintptr(t) + uintptr(hdrSize))
+}
+
+//export goFree
+func goFree(udata unsafe.Pointer, ptr unsafe.Pointer) {
+	if ptr == nil {
+		return
+	}
+	hdrSize := C.size_t(unsafe.Sizeof(C.size_t(0)))
+	raw := unsafe.Pointer(uintptr(ptr) - uintptr(hdrSize))
+	header := (*C.size_t)(raw)
+	old := *header
+	if udata != nil {
+		arr := (*[2]C.size_t)(udata)
+		if arr[0] >= old {
+			arr[0] -= old
+		} else {
+			arr[0] = 0
+		}
+	}
+	C.free(raw)
 }
 
 // TBD: panic handling.
