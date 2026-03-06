@@ -24,7 +24,8 @@ func TestEvalString(t *testing.T) {
 func TestEvalFunc(t *testing.T) {
 	ctx := NewContext(0)
 	defer ctx.DestroyHeap()
-	ctx.PevalString(`(function (x) { return x + x; })`)
+	err := ctx.PevalString(`(function (x) { return x + x; })`)
+	expect(t, err, 0)
 	expect(t, ctx.IsCallable(-1), true)
 	expect(t, Type(ctx.GetType(-1)).IsObject(), true)
 	ctx.PushInt(5)
