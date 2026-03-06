@@ -4,7 +4,7 @@ import "reflect"
 import "testing"
 
 func TestEvalString(t *testing.T) {
-	ctx := NewContext()
+	ctx := NewContext(0)
 	ctx.EvalString(`"Golang love Duktape!"`)
 	expect(t, Type(ctx.GetType(-1)).IsString(), true)
 	expect(t, ctx.GetString(-1), "Golang love Duktape!")
@@ -12,7 +12,7 @@ func TestEvalString(t *testing.T) {
 }
 
 func TestEvalFunc(t *testing.T) {
-	ctx := NewContext()
+	ctx := NewContext(0)
 	ctx.PevalString(`(function (x) { return x + x; })`)
 	expect(t, ctx.IsCallable(-1), true)
 	expect(t, Type(ctx.GetType(-1)).IsObject(), true)
@@ -23,7 +23,7 @@ func TestEvalFunc(t *testing.T) {
 }
 
 func TestEvalWith(t *testing.T) {
-	ctx := NewContext()
+	ctx := NewContext(0)
 
 	obj := MethodSuite{
 		"hi": func(d *Context) int {
@@ -55,7 +55,7 @@ func TestMyAddTwo(t *testing.T) {
 		},
 	}
 
-	ctx := NewContext()
+	ctx := NewContext(0)
 	ctx.PushGlobalObject()
 
 	// Hmm... a property value can outlive an object. look out!
@@ -85,7 +85,7 @@ func TestGoClosure(t *testing.T) {
 		},
 	}
 
-	ctx := NewContext()
+	ctx := NewContext(0)
 
 	ctx.EvalWith(`
             (function(o) {
@@ -109,7 +109,7 @@ type SampleObject struct {
 }
 
 func TestGoObject(t *testing.T) {
-	ctx := NewContext()
+	ctx := NewContext(0)
 	ctx.PushGlobalObject()
 	ctx.PushGoObject(SampleObject{42})
 	ctx.PutPropString(-2, "y")
