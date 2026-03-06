@@ -99,7 +99,7 @@ func (t Type) IsPointer() bool   { return t == DUK_TYPE_POINTER }
 
 var objectMutex sync.Mutex
 var objectMap map[unsafe.Pointer]interface{} = make(map[unsafe.Pointer]interface{})
-var allocMap sync.Map // key: *Context, value: unsafe.Pointer (alloc_udata)
+var allocMap sync.Map // key: unsafe.Pointer (duk_context), value: unsafe.Pointer (alloc_udata)
 
 type Context struct {
 	duk_context unsafe.Pointer
@@ -130,12 +130,12 @@ func NewContext(maxHeapSize uint64) *Context {
 	}
 
 	if udata != nil {
-		allocMap.Store(ctx, udata)
+		allocMap.Store(ctx.duk_context, udata)
 
 		runtime.SetFinalizer(ctx, func(c *Context) {
-			if p, ok := allocMap.Load(c); ok {
+			if p, ok := allocMap.Load(c.duk_context); ok {
 				C.free(p.(unsafe.Pointer))
-				allocMap.Delete(c)
+				allocMap.Delete(c.duk_context)
 			}
 		})
 	}

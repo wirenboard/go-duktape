@@ -263,7 +263,7 @@ func (d *Context) DelPropString(objIndex int, key string) bool {
 // See: http://duktape.org/api.html#duk_destroy_heap
 func (d *Context) DestroyHeap() {
 	C.duk_destroy_heap(d.duk_context)
-	if p, ok := allocMap.Load(d); ok {
+	if p, ok := allocMap.Load(d.duk_context); ok {
 		C.free(p.(unsafe.Pointer))
 		allocMap.Delete(d)
 	}
