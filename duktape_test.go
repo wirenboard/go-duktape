@@ -5,25 +5,26 @@ import "testing"
 
 func TestEvalString(t *testing.T) {
 	ctx := NewContext(0)
+	defer ctx.DestroyHeap()
 	ctx.EvalString(`"Golang love Duktape!"`)
 	expect(t, Type(ctx.GetType(-1)).IsString(), true)
 	expect(t, ctx.GetString(-1), "Golang love Duktape!")
-	ctx.DestroyHeap()
 }
 
 func TestEvalFunc(t *testing.T) {
 	ctx := NewContext(0)
+	defer ctx.DestroyHeap()
 	ctx.PevalString(`(function (x) { return x + x; })`)
 	expect(t, ctx.IsCallable(-1), true)
 	expect(t, Type(ctx.GetType(-1)).IsObject(), true)
 	ctx.PushInt(5)
 	ctx.Pcall(1)
 	expect(t, ctx.GetInt(-1), 10)
-	ctx.DestroyHeap()
 }
 
 func TestEvalWith(t *testing.T) {
 	ctx := NewContext(0)
+	defer ctx.DestroyHeap()
 
 	obj := MethodSuite{
 		"hi": func(d *Context) int {
@@ -38,8 +39,6 @@ func TestEvalWith(t *testing.T) {
 	actual := ctx.GetString(-1)
 
 	expect(t, actual, "hi! 2")
-
-	ctx.DestroyHeap()
 }
 
 // from duktape examples
@@ -56,6 +55,7 @@ func TestMyAddTwo(t *testing.T) {
 	}
 
 	ctx := NewContext(0)
+	defer ctx.DestroyHeap()
 	ctx.PushGlobalObject()
 
 	// Hmm... a property value can outlive an object. look out!
@@ -67,7 +67,6 @@ func TestMyAddTwo(t *testing.T) {
 	res := ctx.GetNumber(-1)
 	ctx.Pop()
 	expect(t, res, float64(5))
-	ctx.DestroyHeap()
 }
 
 func TestGoClosure(t *testing.T) {
@@ -86,6 +85,7 @@ func TestGoClosure(t *testing.T) {
 	}
 
 	ctx := NewContext(0)
+	defer ctx.DestroyHeap()
 
 	ctx.EvalWith(`
             (function(o) {
@@ -101,7 +101,6 @@ func TestGoClosure(t *testing.T) {
 	ctx.Gc(0)
 	ctx.Gc(0)
 	expect(t, len(objectMap), 0)
-	ctx.DestroyHeap()
 }
 
 type SampleObject struct {
@@ -110,6 +109,7 @@ type SampleObject struct {
 
 func TestGoObject(t *testing.T) {
 	ctx := NewContext(0)
+	defer ctx.DestroyHeap()
 	ctx.PushGlobalObject()
 	ctx.PushGoObject(SampleObject{42})
 	ctx.PutPropString(-2, "y")
