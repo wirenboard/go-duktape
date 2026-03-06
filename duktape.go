@@ -128,9 +128,10 @@ func NewContext(maxHeapSize uint64) *Context {
 	ctx := &Context{
 		duk_context: dukCtx,
 	}
-	allocMap.Store(ctx, udata)
 
 	if udata != nil {
+		allocMap.Store(ctx, udata)
+
 		runtime.SetFinalizer(ctx, func(c *Context) {
 			if p, ok := allocMap.Load(c); ok {
 				C.free(p.(unsafe.Pointer))

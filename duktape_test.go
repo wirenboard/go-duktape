@@ -6,6 +6,13 @@ import (
 	"testing"
 )
 
+func TestHeapLimit(t *testing.T) {
+	ctx := NewContext(256 * 1024)
+	defer ctx.DestroyHeap()
+	err := ctx.PevalString(`var buf = new Array(1024*1024); for (var i = 0; i < buf.length; i++) { buf[i] = 0; }`)
+	expect(t, err, 1)
+}
+
 func TestEvalString(t *testing.T) {
 	ctx := NewContext(0)
 	defer ctx.DestroyHeap()
