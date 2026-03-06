@@ -1,7 +1,10 @@
 package duktape
 
-import "reflect"
-import "testing"
+import (
+	"reflect"
+	"strconv"
+	"testing"
+)
 
 func TestEvalString(t *testing.T) {
 	ctx := NewContext(0)
@@ -29,7 +32,7 @@ func TestEvalWith(t *testing.T) {
 	obj := MethodSuite{
 		"hi": func(d *Context) int {
 			x := d.GetInt(-2)
-			d.PushString("hi! " + string(48+x))
+			d.PushString("hi! " + strconv.Itoa(48+x))
 			return 1
 		},
 	}
@@ -38,7 +41,7 @@ func TestEvalWith(t *testing.T) {
 
 	actual := ctx.GetString(-1)
 
-	expect(t, actual, "hi! 2")
+	expect(t, actual, "hi! 50")
 }
 
 // from duktape examples
